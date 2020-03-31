@@ -19,6 +19,8 @@ search_link = "https://www.microsoft.com/ru-ru/search?q="
 
 gameNameTag = "c-subheading-6"
 gamePriceTag = "c-price"
+gameLink = "m-channel-placement-item"
+gamePrice = "pi-price-text"
 
 maximumGames = 5 # максимальное кол-во игр выводимых в сообщении
 dob = 2 # множитель (заменимый)
@@ -56,9 +58,37 @@ def findElement(reqw, el, thingOfFind):
     soup = BeautifulSoup(respw.text, 'html.parser')
 
     #print(respw.text + ("/n" * 3))  # output the html of the page
-    #print(soup.find_all("h3", class_=thingOfFind)[0:maximumGames].text)
+    #print(soup.find_all("href", class_=gameLink)[0:maximumGames].text)
 
     return soup.find_all(el, class_=thingOfFind)
+
+
+def findElementAF(reqw, el, thingOfFind):
+    header = {
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
+        'accept-encoding': 'gzip, deflate, br',
+        'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'cache-control': 'no-cache',
+        'dnt': '1',
+        'pragma': 'no-cache',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'none',
+        'sec-fetch-user': '?1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36'}  # Обеспечивает доступ к сайту
+
+    # Test
+    # soup.find_all("href", class_=gameLink)[0:maximumGames].text = "/ru-ru/p/battlefield-1/bwttw53m5b98"
+    source_url = "https://www.microsoft.com" + str(soup.find_all("href", class_=gameLink)[0:maximumGames].text).replace(" ", "_").replace("'", "%27")
+
+    respw = requests.get(source_url, timeout=10, headers=header)
+    soup = BeautifulSoup(respw.text, 'html.parser')
+
+    #print(respw.text + ("/n" * 3))  # output the html of the page
+    #print(soup.find_all("h1", class_=thingOfFind)[0:maximumGames].text)
+
+    return soup.find_all(el, class_=thingOfFind)
+
 
 def findElementAU(reqw, el, thingOfFind):
     header = {
@@ -92,12 +122,19 @@ def gamesInfoPage(userID, req):
         if i == maximumGames:
             break
         text += "{})".format(i+1) + " " + findElement(req, "h3", gameNameTag)[i].text + "\n"
-        aa = findElement(req, "div", gamePriceTag)[i]
-        root_childsRU = [e.text for e in aa.children if e.name is not None]
+        zz = findElement(req, "href", gameLink)[i]
+        root_childs = [e.text for e in zz.children if e.name is not None]
+        aa = findElementAF(req, "div", gamePrice)[i]
+        root_childs = [e.text for e in aa.children if e.name is not None]
         bb = findElementAU(req, "div", gamePriceTag)[i]
         root_childsAU = [e.text for e in bb.children if e.name is not None]
+        z = 0
         a = 0
         b = 0
+        if len(root_childs) < 4:
+            z = 0
+        else:
+            z = 4
         if len(root_childsRU) < 4:
             a = 0
         else:
@@ -109,7 +146,7 @@ def gamesInfoPage(userID, req):
         if (str(root_childsAU[b]).find("Ahora") != -1):
             root_childsAU[b] = str(root_childsAU[b]).split("Ahora")[1].split("\n")[0]
         if (str(root_childsRU[b]).find("Сейчас") != -1):
-            root_childsRU[b] = str(root_childsRU[b]).split("Сейчас")[1].split("\n")[0]
+            root_childsRU[a] = str(root_childsRU[a]).split("Текущая цена")[1].split("\n")[0]
         print("AA: {} BB: {} LEN: {}/{}".format(root_childsRU, root_childsAU, len(root_childsRU), len(root_childsAU)))
         #print(root_childs[0])
         #print(str(findElement(req, "div", gamePriceTag)[i].text).replace("\n", "").replace("", "").replace("  ","").replace("\r", "").replace("USD$", "").replace("+", "").replace("Бесплатно", "0").replace(",","."))
